@@ -17,11 +17,13 @@ import com.bgsoftware.superiorskyblock.core.messages.Message;
 import com.bgsoftware.superiorskyblock.external.WildStackerSnapshotsContainer;
 import com.bgsoftware.superiorskyblock.module.upgrades.listeners.WildStackerListener;
 import com.bgsoftware.superiorskyblock.service.region.ProtectionHelper;
+import com.bgsoftware.wildstacker.api.WildStackerAPI;
 import com.bgsoftware.wildstacker.api.events.SpawnerPlaceEvent;
 import com.bgsoftware.wildstacker.api.events.SpawnerPlaceInventoryEvent;
 import com.bgsoftware.wildstacker.api.events.SpawnerStackEvent;
 import com.bgsoftware.wildstacker.api.events.SpawnerUnstackEvent;
 import com.bgsoftware.wildstacker.api.objects.StackedSnapshot;
+import com.bgsoftware.wildstacker.api.upgrades.SpawnerUpgrade;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
@@ -62,7 +64,43 @@ public class SpawnersProvider_WildStacker implements SpawnersProviderItemMetaSpa
             cachedSnapshot = WildStackerSnapshotsContainer.getSnapshot(chunkPosition);
         }
         Map.Entry<Integer, EntityType> entry = cachedSnapshot.getStackedSpawner(location);
-        return new Pair<>(entry.getKey(), entry.getValue() + "");
+        
+        SpawnerUpgrade upgrade = WildStackerAPI.getWildStacker().getSystemManager().getStackedSpawner(location).getUpgrade();
+        
+        int stackAmount = entry.getKey();
+        double upgradeMultiplier = 1.0;
+
+        Log.info("Raw spawner data - Location: " + location + ", Stack Amount: " + stackAmount);
+        if (upgrade != null) {
+            Log.info("Upgrade info - Name: " + upgrade.getName() + ", ID: " + upgrade.getId());
+        } else {
+            Log.info("No upgrade found for spawner at " + location);
+        }
+
+        // Spawner Upgrade System
+        // ----------------------
+        // This section handles the multiplier for different spawner upgrades.
+        // Each upgrade type has a specific multiplier that affects the final spawner count.
+        // For example:
+        // - Reinforced (2x): 10 spawners = 20 total
+        // - Guardian (3x): 10 spawners = 30 total
+        // To add a new upgrade, add another else-if statement with the upgrade name
+        // and its corresponding multiplier value.
+        
+        if (upgrade != null) {
+            if (upgrade.getName().equalsIgnoreCase("reinforced")) {
+                upgradeMultiplier = 2;
+            } else if (upgrade.getName().equalsIgnoreCase("guardian")) {
+                upgradeMultiplier = 3;
+            }
+
+            Log.info("Applied upgrade multiplier: " + upgradeMultiplier + " for upgrade: " + upgrade.getName());
+        }
+        
+        int finalValue = (int)(stackAmount * upgradeMultiplier);
+
+        Log.info("Final calculation - Stack Amount: " + stackAmount + " × Multiplier: " + upgradeMultiplier + " = Final Value: " + finalValue);
+        return new Pair<>(finalValue, entry.getValue() + "");
     }
 
     @Override
